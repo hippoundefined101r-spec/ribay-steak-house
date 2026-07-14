@@ -114,6 +114,9 @@
   .menu-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; background:transparent; }
   .menu-card { background:#161616; padding:28px; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.06); }
   .menu-card:hover { background:#1e1e1e; border-color:var(--ember); }
+  .card-img { margin:-28px -28px 20px; height:180px; overflow:hidden; }
+  .card-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s ease; }
+  .menu-card:hover .card-img img { transform:scale(1.05); }
   .card-cat { font-size:9px; letter-spacing:0.3em; text-transform:uppercase; color:var(--ember); margin-bottom:10px; }
   .card-name { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:600; line-height:1.3; color:var(--cream); margin-bottom:8px; }
   .card-desc { font-size:12px; color:var(--smoke); line-height:1.6; flex:1; margin-bottom:20px; }
@@ -148,7 +151,6 @@
   /* BOOKING */
   #booking { background:var(--dark); display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:start; }
   .booking-img { aspect-ratio:4/3; background:linear-gradient(135deg,#1a0e08,#2d1808); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
-  .booking-img::after { content:'ФОТО ЗАЛА'; font-size:10px; letter-spacing:0.3em; color:rgba(200,0,30,0.3); }
   .booking-grid { position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 59px,rgba(200,0,30,0.04) 59px,rgba(200,0,30,0.04) 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,rgba(200,0,30,0.04) 59px,rgba(200,0,30,0.04) 60px); }
 
   /* CONTACTS */
@@ -267,6 +269,10 @@
       само за себя
     </h1>
     <p class="hero-desc">Премиальные стейки из отборной говядины. Живой огонь, настоящий вкус, атмосфера, которую не забудешь.</p>
+    <div class="hero-rating" style="display:flex;align-items:center;gap:10px;margin-bottom:36px;font-size:13px;color:var(--smoke)">
+      <span style="color:#FFB800;letter-spacing:2px">★★★★★</span>
+      <span><strong style="color:var(--cream);font-weight:600">4.7</strong> · 125 оценок в 2ГИС</span>
+    </div>
     <div class="hero-actions">
       <a href="#menu" class="btn-primary">Смотреть меню</a>
       <a href="#booking" class="btn-outline">Забронировать стол</a>
@@ -328,7 +334,7 @@
 
 <!-- BOOKING -->
 <section id="booking">
-  <div class="booking-img"><div class="booking-grid"></div></div>
+  <div class="booking-img"><img src="photos/boul.jpg" alt="Подача блюд в RIBAY" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div>
   <div>
     <div class="section-eyebrow">Бронь стола</div>
     <h2 class="section-title">Зарезервируй<br><em>место</em></h2>
@@ -373,8 +379,8 @@
     </div>
     <div class="contact-block">
       <div class="contact-label">Телефон / WhatsApp</div>
-      <a href="tel:+79697700000" class="contact-val">+7 (969) 770-••••</a>
-      <div class="contact-sub">Уточните актуальный номер у менеджера</div>
+      <a href="tel:+79697700700" class="contact-val">+7 (969) 770-07-00</a>
+      <div class="contact-sub">WhatsApp и звонки — ежедневно с 12:00</div>
     </div>
     <div class="contact-block">
       <div class="contact-label">Время работы</div>
@@ -383,7 +389,7 @@
     <div class="contact-block">
       <div class="contact-label">Связаться</div>
       <div style="display:flex;gap:12px;margin-top:8px">
-        <a href="https://wa.me/79697700000" target="_blank" class="btn-primary" style="font-size:11px;padding:10px 20px">WhatsApp</a>
+        <a href="https://wa.me/79697700700" target="_blank" class="btn-primary" style="font-size:11px;padding:10px 20px">WhatsApp</a>
         <a href="https://t.me/ribay_makhachkala" target="_blank" class="btn-outline" style="font-size:11px;padding:10px 20px">Telegram</a>
       </div>
     </div>
@@ -431,15 +437,15 @@
 </div>
 
 <script>
-const WA_PHONE = '79697700000';
+const WA_PHONE = '79697700700';
 const TG_USERNAME = 'ribay_makhachkala';
 
 const MENU = [
-  {id:1,cat:'steaks',name:'Стейк Рибай',price:1800,desc:'Классический стейк из мраморной говядины. Степень прожарки — на ваш выбор.'},
+  {id:1,cat:'steaks',name:'Стейк Рибай',price:1800,img:'photos/steak.jpg',desc:'Классический стейк из мраморной говядины. Степень прожарки — на ваш выбор.'},
   {id:2,cat:'steaks',name:'Стейк Стриплойн',price:1600,desc:'Нежный длиннейший отруб на кости, прожаренный до идеала.'},
   {id:3,cat:'steaks',name:'Стейк Тибон',price:2100,desc:'Два вида мяса в одном — стриплойн и вырезка на Т-образной кости.'},
   {id:4,cat:'steaks',name:'Стейк Мачете',price:1400,desc:'Сочный диафрагменный стейк с ярким мясным вкусом.'},
-  {id:5,cat:'shashlik',name:'Шашлык из мякоти баранины',price:800,desc:'Отборная баранина, маринованная по-дагестански.'},
+  {id:5,cat:'shashlik',name:'Шашлык из мякоти баранины',price:800,img:'photos/shashlik.jpg',desc:'Отборная баранина, маринованная по-дагестански.'},
   {id:6,cat:'shashlik',name:'Шашлык Бастурма',price:920,desc:'Вяленая говядина с восточными специями на живом углу.'},
   {id:7,cat:'shashlik',name:'Шашлык Пистолеты 620г',price:1150,desc:'Голяшки молодого барашка — фирменный хит заведения.'},
   {id:8,cat:'shashlik',name:'Шашлык Куриный',price:480,desc:'Грудка или бедро — сочно, ароматно, быстро.'},
@@ -458,13 +464,14 @@ const MENU = [
   {id:21,cat:'salads',name:'Цезарь с курицей',price:380,desc:'Хрустящий Ромэн, куриное филе, сухарики, соус Цезарь.'},
   {id:22,cat:'salads',name:'Греческий',price:350,desc:'Свежие овощи, маслины, сыр Фета, оливковое масло.'},
   {id:23,cat:'salads',name:'Тёплый салат с говядиной',price:490,desc:'Мраморная говядина, руккола, вишнёвые томаты.'},
-  {id:24,cat:'sets',name:'Сет Шашлычный',price:3430,desc:'Шашлыки ассорти для компании 3–4 человек + лаваш и соусы.'},
+  {id:33,cat:'salads',name:'Салат с хрустящими баклажанами',price:420,img:'photos/salat-baklazhany.jpg',desc:'Хрустящие баклажаны, микс салатов, черри и нежный сыр.'},
+  {id:24,cat:'sets',name:'Сет Шашлычный',price:3430,img:'photos/set-shashlik.jpg',desc:'Шашлыки ассорти для компании 3–4 человек + лаваш и соусы.'},
   {id:25,cat:'sets',name:'Сет Хан',price:4470,desc:'Премиальный сет на 4–6 человек: стейки, закуски, роллы.'},
   {id:26,cat:'sets',name:'Сет Шик',price:3230,desc:'Мясное ассорти + пицца + роллы. Хит для вечеринок.'},
   {id:27,cat:'breakfast',name:'Английский завтрак',price:450,desc:'Яйца, бекон, тосты, фасоль, томаты.'},
   {id:28,cat:'breakfast',name:'Скрэмбл',price:550,desc:'Нежные взбитые яйца с лососем и зеленью.'},
   {id:29,cat:'breakfast',name:'Сырники',price:380,desc:'Творожные сырники со сметаной и ягодным соусом.'},
-  {id:30,cat:'desserts',name:'Чизкейк Нью-Йорк',price:350,desc:'Классический чизкейк на рассыпчатой основе.'},
+  {id:30,cat:'desserts',name:'Чизкейк Нью-Йорк',price:350,img:'photos/cheesecake.jpg',desc:'Классический чизкейк на рассыпчатой основе.'},
   {id:31,cat:'desserts',name:'Шоколадный фондан',price:380,desc:'Тёплый шоколадный торт с жидкой начинкой и мороженым.'},
   {id:32,cat:'desserts',name:'Баклава',price:250,desc:'Восточная сладость с орехами и мёдом.'},
 ];
@@ -521,6 +528,7 @@ function renderMenu(cat){
   const items=cat==='all'?MENU:MENU.filter(m=>m.cat===cat);
   grid.innerHTML=items.map(item=>`
     <div class="menu-card">
+      ${item.img?`<div class="card-img"><img src="${item.img}" alt="${item.name}" loading="lazy"></div>`:''}
       <div class="card-cat">${CAT_LABELS[item.cat]||item.cat}</div>
       <div class="card-name">${item.name}</div>
       <div class="card-desc">${item.desc}</div>
