@@ -61,7 +61,7 @@
   .nav-links { display:flex; gap:36px; list-style:none; }
   .nav-links a { font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--smoke); text-decoration:none; transition:color 0.2s; }
   .nav-links a:hover { color:var(--ember-lt); }
-  .nav-cart { position:relative; background:var(--ember); border:1px solid var(--ember); color:#fff; padding:8px 20px; font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; }
+  .nav-cart { position:relative; display:inline-flex; align-items:center; background:var(--ember); border:1px solid var(--ember); color:#fff; padding:10px 20px; font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; }
   .nav-cart:hover { background:var(--ember-lt); color:#fff; border-color:var(--ember-lt); }
   .cart-badge { position:absolute; top:-8px; right:-8px; background:#fff; color:var(--ember); width:20px; height:20px; border-radius:50%; font-size:11px; font-weight:600; display:none; align-items:center; justify-content:center; }
   .burger-btn { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:4px; }
@@ -104,17 +104,46 @@
   section { padding:100px 48px; }
   .section-eyebrow { font-size:10px; letter-spacing:0.4em; text-transform:uppercase; color:var(--ember); margin-bottom:16px; }
   .section-title { font-family:'Cormorant Garamond',serif; font-size:clamp(36px,5vw,56px); font-weight:300; line-height:1.1; margin-bottom:48px; }
-  .section-title em { font-style:italic; color:var(--ember); }
-  .divider { width:40px; height:1px; background:var(--ember); margin-bottom:32px; }
+  .section-title em, .hero-title em {
+    font-style:italic;
+    background:linear-gradient(100deg, var(--ember) 10%, #FF5A1E 55%, #FFB35C 95%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .divider {
+    width:64px; height:2px; margin-bottom:32px; border-radius:1px;
+    background:linear-gradient(90deg, var(--ember) 0%, #FF6A2B 45%, rgba(255,180,80,0.9) 70%, transparent 100%);
+    box-shadow:0 0 12px rgba(200,0,30,0.55), 0 0 28px rgba(255,106,43,0.25);
+    animation:emberBreath 3.2s ease-in-out infinite;
+  }
+  @keyframes emberBreath {
+    0%,100% { opacity:.75; box-shadow:0 0 8px rgba(200,0,30,0.4), 0 0 18px rgba(255,106,43,0.15); }
+    50%     { opacity:1;   box-shadow:0 0 14px rgba(200,0,30,0.65), 0 0 32px rgba(255,106,43,0.3); }
+  }
+
+  /* Появление при скролле */
+  .rv { opacity:0; transform:translateY(18px); transition:opacity .55s ease, transform .55s ease; }
+  .rv.in { opacity:1; transform:none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .divider { animation:none; }
+    .rv { opacity:1; transform:none; transition:none; }
+    html { scroll-behavior:auto; }
+  }
+
+  /* Видимый фокус с клавиатуры */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline:2px solid var(--ember-lt); outline-offset:2px;
+  }
 
   /* MENU */
   #menu { background:var(--dark); }
   .menu-cats { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:52px; }
-  .cat-btn { background:none; border:1px solid rgba(138,123,110,0.3); color:var(--smoke); padding:8px 20px; font-family:'Inter',sans-serif; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
+  .cat-btn { background:none; border:1px solid rgba(138,123,110,0.3); color:var(--smoke); padding:12px 22px; min-height:44px; font-family:'Inter',sans-serif; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
   .cat-btn:hover,.cat-btn.active { background:var(--ember); border-color:var(--ember); color:#fff; }
   .menu-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; background:transparent; }
-  .menu-card { background:#161616; padding:28px; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.06); }
-  .menu-card:hover { background:#1e1e1e; border-color:var(--ember); }
+  .menu-card { background:#161616; padding:28px; cursor:pointer; transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.06); }
+  .menu-card:hover { background:#1b1b1b; border-color:rgba(200,0,30,0.6); transform:translateY(-4px); box-shadow:0 14px 34px rgba(0,0,0,0.5), 0 4px 18px rgba(200,0,30,0.12); }
+  @media (prefers-reduced-motion: reduce) { .menu-card:hover { transform:none; } }
   .card-img { margin:-28px -28px 20px; height:180px; overflow:hidden; }
   .card-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s ease; }
   .menu-card:hover .card-img img { transform:scale(1.05); }
@@ -123,7 +152,8 @@
   .card-desc { font-size:12px; color:var(--smoke); line-height:1.6; flex:1; margin-bottom:20px; }
   .card-footer { display:flex; align-items:center; justify-content:space-between; }
   .card-price { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:#FFFFFF; }
-  .add-btn { width:36px; height:36px; border:1px solid var(--ember); background:none; color:var(--ember); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; line-height:1; }
+  .add-btn { width:44px; height:44px; border:1px solid var(--ember); background:none; color:var(--ember); font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s, box-shadow .15s; line-height:1; }
+  .add-btn:active { box-shadow:0 0 0 4px rgba(200,0,30,0.25); }
   .add-btn:hover { background:var(--ember); color:#fff; }
 
   /* DELIVERY */
@@ -275,7 +305,7 @@
     <li><a href="#contacts">Контакты</a></li>
   </ul>
   <div style="display:flex;gap:12px;align-items:center">
-    <button class="nav-cart" id="cartBtn">🛒 Корзина <span class="cart-badge" id="cartBadge">0</span></button>
+    <button class="nav-cart" id="cartBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="margin-right:8px;flex-shrink:0"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 14.6l.1-.1L8.1 13h7.5c.75 0 1.4-.4 1.75-1.03L21 5H6.2L5.3 3H2v2h2l3.6 7.6-1.35 2.44C5.5 16.4 6.5 18 8 18h12v-2H8c-.15 0-.25-.1-.25-.25l.05-.15z"/></svg>Корзина <span class="cart-badge" id="cartBadge">0</span></button>
     <button class="burger-btn" id="burgerBtn"><span></span><span></span><span></span></button>
   </div>
 </nav>
@@ -607,6 +637,21 @@ if(sessionStorage.getItem('preShown')) {
 
 // init
 renderMenu('steaks');
+
+// Появление при скролле: заголовки, факты, формы, карточки меню
+(function(){
+  if (!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  function watch(sel, ctx){ (ctx||document).querySelectorAll(sel).forEach(function(el){ el.classList.add('rv'); io.observe(el); }); }
+  watch('.section-title, .delivery-facts, .order-form, .contact-block, .booking-img');
+  // карточки меню перерисовываются — вешаем после каждого рендера
+  var grid = document.getElementById('menuGrid');
+  var mo = new MutationObserver(function(){ watch('.menu-card:not(.rv)', grid); });
+  mo.observe(grid, { childList: true });
+  watch('.menu-card', grid);
+})();
 </script>
 
 <!-- AI CONSULTANT -->
