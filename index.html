@@ -821,7 +821,7 @@ renderMenu('steaks');
       .then(function(r){ return r.json(); })
       .then(function(s){
         if (s.paid) {
-          try { localStorage.removeItem('rbPending'); localStorage.removeItem('rbLastOrderSig'); } catch(e){}
+          try { localStorage.removeItem('rbPending'); } catch(e){}
           // Заказ закрыт — стираем историю, чтобы модель не тащила его в новый диалог
           history = [];
           save();
@@ -935,7 +935,7 @@ renderMenu('steaks');
       a.rel = 'noopener';
       a.className = 'rb-pay-btn';
       a.textContent = 'Оплатить ' + d.paySum + '₽';
-      try { localStorage.setItem('rbPending', JSON.stringify({ id: d.orderId, payUrl: d.payUrl, paySum: d.paySum, total: d.total })); } catch(e){}
+      try { localStorage.setItem('rbPending', JSON.stringify({ id: d.orderId, payUrl: d.payUrl, paySum: d.paySum, total: d.total, sig: order._sig || '' })); } catch(e){}
       wrap.appendChild(sumLine);
       wrap.appendChild(a);
       msgs.appendChild(wrap);
@@ -972,20 +972,21 @@ renderMenu('steaks');
           try { order = JSON.parse(m[1]); } catch(e){ order = null; }
           reply = reply.replace(m[0], '').trim();
           if (!reply) reply = 'Отлично, заказ принят!';
-          // Предохранитель: модель иногда повторяет старый заказ в новом диалоге.
-          // Тот же самый заказ второй раз не создаём.
+          // Предохранитель: если ровно такой же заказ уже ВИСИТ НЕОПЛАЧЕННЫМ —
+          // не плодим дубль, показываем его кнопку. Новый или закрытый — создаём.
           if (order) {
             var sig = JSON.stringify(order);
-            var prevSig = null;
-            try { prevSig = localStorage.getItem('rbLastOrderSig'); } catch(e){}
-            if (sig === prevSig) {
-              // Тот же заказ уже создавался — не плодим дубль,
-              // а показываем существующую кнопку оплаты (или статус)
-              order = null;
-              checkPending();
-            } else {
-              try { localStorage.setItem('rbLastOrderSig', sig); } catch(e){}
+            var pendRaw = null;
+            try { pendRaw = localStorage.getItem('rbPending'); } catch(e){}
+            if (pendRaw) {
+              var pendObj = null;
+              try { pendObj = JSON.parse(pendRaw); } catch(e){}
+              if (pendObj && pendObj.sig === sig) {
+                order = null;
+                checkPending();
+              }
             }
+            if (order) order._sig = sig;
           }
         }
       }
