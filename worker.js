@@ -235,7 +235,9 @@ async function handleYoomoney(request, env) {
   ].join('&');
 
   const hash = await sha1hex(checkString);
-  if (hash !== f('sha1_hash')) {
+  // ЮMoney кладёт подпись то в sha1_hash (по докам), то в sign (по факту) — принимаем обе
+  const receivedHash = f('sha1_hash') || f('sign');
+  if (hash !== receivedHash) {
     // Диагностика: какие поля пришли и сошлась ли подпись
     console.log('YOOMONEY BAD SIGNATURE', JSON.stringify({
       fields: Object.keys(p),
@@ -243,7 +245,7 @@ async function handleYoomoney(request, env) {
       amount: f('amount'),
       label: f('label'),
       computed: hash,
-      received: f('sha1_hash'),
+      received: receivedHash,
       secretLen: (env.YOOMONEY_SECRET || '').length,
     }));
     return new Response('bad signature', { status: 400 });
