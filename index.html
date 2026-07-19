@@ -69,7 +69,7 @@
 
   /* HERO */
   #hero { position:relative; height:100vh; min-height:600px; display:flex; align-items:flex-end; overflow:hidden; }
-  .hero-video-wrap { position:absolute; inset:0; }
+  .hero-video-wrap { position:absolute; inset:0; overflow:hidden; }
   .hero-video-wrap video { width:100%; height:100%; object-fit:cover; }
   .hero-video-placeholder {
     width:100%; height:100%;
@@ -82,7 +82,12 @@
     background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(200,0,30,0.03) 40px,rgba(200,0,30,0.03) 41px);
   }
   .hero-placeholder-text { font-family:'Cormorant Garamond',serif; font-size:14px; letter-spacing:0.25em; color:rgba(200,0,30,0.4); text-transform:uppercase; text-align:center; line-height:2; position:relative; }
-  .hero-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.75) 50%,rgba(0,0,0,0.45) 100%); }
+  .hero-overlay {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(120% 90% at 30% 75%, rgba(0,0,0,0.55) 0%, transparent 60%),
+      linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.8) 45%, rgba(0,0,0,0.62) 100%);
+  }
   .hero-content { position:relative; z-index:2; padding:0 48px 80px; max-width:700px; }
   .hero-eyebrow { font-size:11px; letter-spacing:0.4em; text-transform:uppercase; color:var(--ember); margin-bottom:20px; display:flex; align-items:center; gap:16px; }
   .hero-eyebrow::before { content:''; display:block; width:40px; height:1px; background:var(--ember); }
@@ -242,7 +247,18 @@
     .nav-links { display:none; }
     .burger-btn { display:flex; }
     section { padding:72px 24px; }
-    .hero-content { padding:0 24px 60px !important; }
+
+    /* Хиро на телефоне: ролик виден ЦЕЛИКОМ полосой 16:9, контент под ним */
+    #hero { height:auto; min-height:100svh; display:block; padding:0; }
+    .hero-video-wrap { position:relative; inset:auto; aspect-ratio:16/9; margin-top:64px; }
+    .hero-video-wrap::after {
+      content:''; position:absolute; left:0; right:0; bottom:-1px; height:45%;
+      background:linear-gradient(to top, #050505 8%, transparent 100%);
+      pointer-events:none;
+    }
+    .hero-overlay { display:none; }
+    .hero-content { padding:4px 24px 56px !important; max-width:none; }
+    .hero-title { font-size:clamp(44px,11vw,64px); }
     .hero-scroll { display:none; }
     #delivery,#booking,#contacts { grid-template-columns:1fr; gap:48px; }
     .booking-img { display:none; }
