@@ -658,10 +658,10 @@ renderMenu('steaks');
   var busy = false;
 
   function save(){
-    try { sessionStorage.setItem('rbChat', JSON.stringify(history)); } catch(e){}
+    try { localStorage.setItem('rbChat', JSON.stringify(history)); } catch(e){}
   }
   function load(){
-    try { return JSON.parse(sessionStorage.getItem('rbChat') || '[]'); } catch(e){ return []; }
+    try { return JSON.parse(localStorage.getItem('rbChat') || '[]'); } catch(e){ return []; }
   }
 
   function add(cls, text){
