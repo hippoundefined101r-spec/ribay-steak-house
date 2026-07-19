@@ -218,39 +218,41 @@ async function handleYoomoney(request, env) {
   const body = await request.formData();
   const p = Object.fromEntries(body.entries());
 
-  // Отсутствующее поле = пустая строка, НЕ undefined — иначе подпись никогда не сойдётся
+  // Отсутствующее поле = пустая строка, НЕ undefined
   const f = (k) => (p[k] === undefined || p[k] === null) ? '' : String(p[k]);
 
-  // Проверка подписи sha1 по документации ЮMoney
-  const checkString = [
-    f('notification_type'),
-    f('operation_id'),
-    f('amount'),
-    f('currency'),
-    f('datetime'),
-    f('sender'),
-    f('codepro'),
-    env.YOOMONEY_SECRET,
-    f('label'),
-  ].join('&');
+  // Проверка подписи по актуальной документации ЮMoney (sign = HMAC-SHA256).
+  // Старый sha1_hash перестал приходить с 18.05.2026.
+  // Алгоритм: все параметры кроме sign -> сортировка ключей по алфавиту ->
+  // URL-кодирование значений (RFC 3986) -> строка key=value&key=value -> HMAC-SHA256 hex.
+  const checkString = Object.keys(p)
+    .filter((k) => k !== 'sign')
+    .sort()
+    .map((k) => k + '=' + rfc3986(f(k)))
+    .join('&');
 
-  const hash = await sha1hex(checkString);
-  // ЮMoney кладёт подпись то в sha1_hash (по докам), то в sign (по факту) — принимаем обе
-  const receivedHash = f('sha1_hash') || f('sign');
-  if (hash !== receivedHash) {
-    // Диагностика: какие поля пришли и сошлась ли подпись
+  const computed = await hmacSha256Hex(env.YOOMONEY_SECRET || '', checkString);
+  const received = f('sign').toLowerCase();
+
+  if (computed !== received) {
     console.log('YOOMONEY BAD SIGNATURE', JSON.stringify({
       fields: Object.keys(p),
       notification_type: f('notification_type'),
       amount: f('amount'),
       label: f('label'),
-      computed: hash,
-      received: receivedHash,
+      computed,
+      received,
       secretLen: (env.YOOMONEY_SECRET || '').length,
     }));
     return new Response('bad signature', { status: 400 });
   }
-  console.log('YOOMONEY OK', f('notification_type'), f('amount'), 'label=' + f('label'));
+  console.log('YOOMONEY OK', f('notification_type'), f('amount'), 'label=' + f('label'),
+    f('test_notification') === 'true' ? 'TEST' : '');
+
+  // Тестовое уведомление: подпись сошлась, заказа нет — просто подтверждаем приём
+  if (f('test_notification') === 'true') {
+    return new Response('ok');
+  }
 
   const orderId = p.label;
   if (!orderId) return new Response('ok'); // перевод без label — не наш заказ
@@ -307,6 +309,19 @@ async function tgSend(env, text) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text, parse_mode: 'HTML' }),
   });
+}
+
+function rfc3986(str) {
+  // encodeURIComponent + доэкранирование символов, которые RFC 3986 требует кодировать
+  return encodeURIComponent(str).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
+async function hmacSha256Hex(secret, msg) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function sha1hex(str) {
