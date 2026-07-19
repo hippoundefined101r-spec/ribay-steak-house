@@ -658,10 +658,16 @@ renderMenu('steaks');
   var busy = false;
 
   function save(){
-    try { localStorage.setItem('rbChat', JSON.stringify(history)); } catch(e){}
+    try { localStorage.setItem('rbChat', JSON.stringify({t: Date.now(), h: history})); } catch(e){}
   }
   function load(){
-    try { return JSON.parse(localStorage.getItem('rbChat') || '[]'); } catch(e){ return []; }
+    try {
+      var raw = JSON.parse(localStorage.getItem('rbChat') || 'null');
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw; // старый формат — примем один раз
+      if (Date.now() - (raw.t || 0) > 24*60*60*1000) return []; // сутки — чистый лист
+      return raw.h || [];
+    } catch(e){ return []; }
   }
 
   function add(cls, text){
@@ -907,7 +913,10 @@ renderMenu('steaks');
             var prevSig = null;
             try { prevSig = localStorage.getItem('rbLastOrderSig'); } catch(e){}
             if (sig === prevSig) {
+              // Тот же заказ уже создавался — не плодим дубль,
+              // а показываем существующую кнопку оплаты (или статус)
               order = null;
+              checkPending();
             } else {
               try { localStorage.setItem('rbLastOrderSig', sig); } catch(e){}
             }
