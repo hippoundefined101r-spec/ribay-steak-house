@@ -243,6 +243,8 @@
 .rb-chip{background:transparent;border:1px solid rgba(200,0,30,.55);color:rgba(255,255,255,.85);border-radius:20px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:12.5px;cursor:pointer;transition:background .2s}
 .rb-chip:hover{background:rgba(200,0,30,.18)}
 #rb-ai-wa{display:none;margin:0 14px 10px;background:#25D366;color:#fff;border:none;border-radius:10px;padding:11px;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;align-items:center;justify-content:center;gap:8px}
+.rb-pay-btn{display:block;text-align:center;background:var(--ember,#C8001E);color:#fff;text-decoration:none;border-radius:10px;padding:11px 16px;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:600;letter-spacing:.02em;transition:opacity .2s}
+.rb-pay-btn:hover{opacity:.85}
 #rb-ai-wa.show{display:flex}
 #rb-ai-wa svg{width:18px;height:18px;fill:#fff}
 #rb-ai-input{display:flex;gap:8px;padding:12px;background:#17191C;border-top:1px solid rgba(255,255,255,.08)}
@@ -629,16 +631,23 @@ renderMenu('steaks');
 (function(){
   var API_URL = "https://blank.aigcbest.top/v1/messages";
   var API_KEY = "sk-hoyCgdrCNDtkIpLQyzxKCt3DchsBtSx74mgIRQvLq1WOlpuO";
+  // URL платёжного воркера Cloudflare. Пока пусто — чат работает по-старому (WhatsApp).
+  // После деплоя воркера вписать сюда: https://имя.workers.dev
+  var WORKER_URL = "";
+  var PAY_ENABLED = !!WORKER_URL;
   var WA_PHONE_AI = "79697700700";
   var GREETING = "Ассаляму алейкум! Я Амина, консультант RIBAY. Подскажу по меню, помогу выбрать блюдо, оформить доставку или забронировать стол. Что вас интересует?";
   var MENU_TEXT = (function(){
     try {
       var byCat = {};
-      MENU.forEach(function(m){ (byCat[m.cat] = byCat[m.cat] || []).push(m.name + ' — ' + m.price + '₽'); });
+      MENU.forEach(function(m){ (byCat[m.cat] = byCat[m.cat] || []).push('[id ' + m.id + '] ' + m.name + ' — ' + m.price + '₽'); });
       return Object.keys(byCat).map(function(c){ return (CAT_LABELS[c]||c) + ': ' + byCat[c].join('; '); }).join('. ');
     } catch(e){ return ''; }
   })();
-  var SYSTEM = "Ты — Амина, консультант ресторана RIBAY Steak House в Махачкале (ул. Уллуаинская, 1, посёлок Семендер, Кировский район). Стейк-хаус: стейки из мраморной говядины на живом огне, шашлыки, дагестанская кухня, пицца, роллы. Рейтинг 4.7 в 2ГИС. Работаем ежедневно 12:00–24:00. Залы: основной, кабинки, VIP-зал, банкетный зал — всё бронируется. Есть молельная комната. Доставка: ежедневно 12:00–24:00, в среднем 60 минут, минимальный заказ 500₽, бесплатно от 1500₽. Телефон и WhatsApp: +7 969 770-07-00. МЕНЮ С ЦЕНАМИ: " + MENU_TEXT + ". ТОН: тёплый, гостеприимный, живой — как хороший официант, который знает меню наизусть. Простой человеческий язык, без канцелярита и без панибратства. Эмодзи не используй. ОБРАЩЕНИЕ: зеркаль гостя — на ты отвечай на ты, на вы — на вы. ПРАВИЛА: отвечай коротко, 1-3 предложения. Цены называй смело — они из меню. Советуй блюда под вкус, компанию и бюджет гостя, предлагай сочетания (стейк + салат, сет на компанию). Для оформления заказа, доставки или брони предлагай нажать зелёную кнопку WhatsApp внизу чата — заявка уйдёт менеджеру. Про бронь уточняй дату, время и число гостей, если гость сам не сказал. Чего нет в меню — честно говори, что нет, и предлагай похожее. На вопросы не про ресторан вежливо возвращай к теме. На салам/ассаляму алейкум отвечай: Ваалейкум ассалям.";
+  var WA_RULES = "Для оформления заказа, доставки или брони предлагай нажать зелёную кнопку WhatsApp внизу чата — заявка уйдёт менеджеру. ";
+  var ORDER_RULES = 'ОФОРМЛЕНИЕ И ОПЛАТА: заказ доставки и бронь стола оформляются прямо в чате с онлайн-оплатой, никакого WhatsApp не предлагай. Для доставки собери: блюда с количеством, телефон, адрес. Для брони: дата, время, число гостей, телефон — бронь подтверждается депозитом 500₽. Когда всё собрано, перечисли заказ гостю и спроси подтверждение. Только после явного подтверждения гостя добавь В САМОМ КОНЦЕ ответа служебную строку строго в формате [[ЗАКАЗ]]{"type":"delivery","items":[{"id":1,"qty":2}],"phone":"+7...","address":"улица, дом","name":"имя","comment":""}[[/ЗАКАЗ]] — id блюд бери только из меню выше, ничего не выдумывай. Для брони: "type":"booking", "items":[{"id":"bron","qty":1}], дату, время и число гостей запиши в comment, address не нужен. Гость служебную строку не увидит — после неё на сайте появится кнопка оплаты, так и скажи: сейчас появится кнопка оплаты ниже. Сумму к оплате сам не называй и не считай. ';
+  var SYSTEM_ORDER_PART = PAY_ENABLED ? ORDER_RULES : WA_RULES;
+  var SYSTEM = "Ты — Амина, консультант ресторана RIBAY Steak House в Махачкале (ул. Уллуаинская, 1, посёлок Семендер, Кировский район). Стейк-хаус: стейки из мраморной говядины на живом огне, шашлыки, дагестанская кухня, пицца, роллы. Рейтинг 4.7 в 2ГИС. Работаем ежедневно 12:00–24:00. Залы: основной, кабинки, VIP-зал, банкетный зал — всё бронируется. Есть молельная комната. Доставка: ежедневно 12:00–24:00, в среднем 60 минут, минимальный заказ 500₽, бесплатно от 1500₽. Телефон и WhatsApp: +7 969 770-07-00. МЕНЮ С ЦЕНАМИ: " + MENU_TEXT + ". ТОН: тёплый, гостеприимный, живой — как хороший официант, который знает меню наизусть. Простой человеческий язык, без канцелярита и без панибратства. Эмодзи не используй. ОБРАЩЕНИЕ: зеркаль гостя — на ты отвечай на ты, на вы — на вы. ПРАВИЛА: отвечай коротко, 1-3 предложения. Цены называй смело — они из меню. Советуй блюда под вкус, компанию и бюджет гостя, предлагай сочетания (стейк + салат, сет на компанию). " + SYSTEM_ORDER_PART + "Про бронь уточняй дату, время и число гостей, если гость сам не сказал. Чего нет в меню — честно говори, что нет, и предлагай похожее. На вопросы не про ресторан вежливо возвращай к теме. На салам/ассаляму алейкум отвечай: Ваалейкум ассалям.";
   var history = [];
   var btn = document.getElementById('rb-ai-btn');
   var panel = document.getElementById('rb-ai-panel');
@@ -718,7 +727,7 @@ renderMenu('steaks');
     {label:'Посоветуй стейк', send:'Посоветуй, какой стейк взять?'},
     {label:'Что взять на компанию', send:'Что взять на компанию 4 человека?'},
     {label:'Доставка', send:'Как работает доставка?'},
-    {label:'📲 Забронировать стол', wa:true}
+    PAY_ENABLED ? {label:'📲 Забронировать стол', send:'Хочу забронировать стол'} : {label:'📲 Забронировать стол', wa:true}
   ];
   function renderChips(){
     chips.innerHTML = '';
@@ -744,7 +753,7 @@ renderMenu('steaks');
       for (var i = 0; i < history.length; i++) {
         add(history[i].role === 'user' ? 'user' : 'bot', history[i].content);
       }
-      waBtn.classList.add('show');
+      if (!PAY_ENABLED) waBtn.classList.add('show');
       hideChips();
     } else {
       renderChips();
@@ -786,6 +795,43 @@ renderMenu('steaks');
     });
   }
 
+  function createPayment(order){
+    var wait = add('bot', 'Секунду, готовлю оплату...');
+    fetch(WORKER_URL + '/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      wait.remove();
+      if (!d.payUrl) {
+        add('err', 'Не получилось создать оплату' + (d.error ? ' (' + d.error + ')' : '') + '. Позвоните нам: +7 969 770-07-00');
+        return;
+      }
+      var wrap = document.createElement('div');
+      wrap.className = 'rb-msg bot';
+      var sumLine = document.createElement('div');
+      sumLine.textContent = 'Сумма заказа: ' + d.total + '₽' + (d.paySum !== d.total ? ' · к оплате сейчас (демо): ' + d.paySum + '₽' : '');
+      sumLine.style.marginBottom = '8px';
+      var a = document.createElement('a');
+      a.href = d.payUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'rb-pay-btn';
+      a.textContent = 'Оплатить ' + d.paySum + '₽';
+      wrap.appendChild(sumLine);
+      wrap.appendChild(a);
+      msgs.appendChild(wrap);
+      msgs.scrollTop = msgs.scrollHeight;
+      add('bot', 'После оплаты заказ сразу уйдёт на кухню, менеджер перезвонит для подтверждения.');
+    })
+    .catch(function(){
+      wait.remove();
+      add('err', 'Оплата сейчас недоступна. Позвоните нам: +7 969 770-07-00');
+    });
+  }
+
   function ask(){
     var text = input.value.trim();
     if (!text || busy) return;
@@ -803,10 +849,20 @@ renderMenu('steaks');
     callAnthropic()
     .then(function(reply){
       typing.remove();
+      var order = null;
+      if (PAY_ENABLED) {
+        var m = reply.match(/\[\[ЗАКАЗ\]\]([\s\S]*?)\[\[\/ЗАКАЗ\]\]/);
+        if (m) {
+          try { order = JSON.parse(m[1]); } catch(e){ order = null; }
+          reply = reply.replace(m[0], '').trim();
+          if (!reply) reply = 'Отлично, заказ принят!';
+        }
+      }
       add('bot', reply);
-      history.push({role:'assistant', content:reply});
+      history.push({role:'assistant', content: reply + (order ? ' (заказ оформлен, кнопка оплаты отправлена)' : '')});
       save();
-      waBtn.classList.add('show');
+      if (!PAY_ENABLED) waBtn.classList.add('show');
+      if (order) createPayment(order);
     })
     .catch(function(e){
       typing.remove();
