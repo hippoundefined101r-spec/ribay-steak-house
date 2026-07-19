@@ -75,10 +75,15 @@ async function handleAI(request, env) {
   }
 
   // Модель и потолок токенов фиксируем на сервере — фронту не доверяем
+  const sys = String(body.system || '');
+  // Прокси работает только на промпты этого сайта — чужие задачи через наш ключ не гоняем
+  if (!sys.startsWith('Ты — Амина') && !sys.startsWith('Составь короткую заявку')) {
+    return json({ error: 'forbidden' }, 403);
+  }
   const payload = {
     model: 'claude-sonnet-4-6',
     max_tokens: Math.min(Number(body.max_tokens) || 300, 400),
-    system: String(body.system || '').slice(0, 8000),
+    system: sys.slice(0, 8000),
     messages: Array.isArray(body.messages) ? body.messages.slice(-20) : [],
   };
 
@@ -114,6 +119,15 @@ async function handleStatus(url, env) {
 /* ---------- 1. Фронт присылает заказ ---------- */
 
 async function handleOrder(request, env) {
+  // Лимит: не больше 10 заказов в час с одного IP — защита KV от спама
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const bucket = 'rlo:' + ip + ':' + Math.floor(Date.now() / 3600000);
+  const used = parseInt((await env.ORDERS.get(bucket)) || '0', 10);
+  if (used >= 10) {
+    return json({ error: 'Слишком много заказов, попробуйте позже' }, 429);
+  }
+  await env.ORDERS.put(bucket, String(used + 1), { expirationTtl: 3700 });
+
   let order;
   try {
     order = await request.json();
@@ -280,18 +294,31 @@ async function handleYoomoney(request, env) {
   }
 
   const order = JSON.parse(raw);
-  if (order.paid) return new Response('ok'); // защита от повторного уведомления
+  // Заказ оплачен И заявка доставлена — дубль уведомления, молча подтверждаем
+  if (order.paid && order.notified) return new Response('ok');
 
-  // amount приходит уже за вычетом комиссии — сверяем мягко
-  // Сверяем с paySum (в демо это 10₽), а не с реальной суммой заказа
+  // amount приходит уже за вычетом комиссии — сверяем с запасом ~6%
   const received = parseFloat(p.amount);
   const expected = order.paySum ?? order.total;
-  const shortpay = received < expected * 0.94; // запас на комиссию ~3-6%
 
-  order.paid = true;
-  order.paidAmount = received;
-  order.operationId = p.operation_id;
-  await env.ORDERS.put(orderId, JSON.stringify(order), { expirationTtl: 60 * 60 * 24 * 7 });
+  // НЕДОПЛАТА: заказ оплаченным НЕ считаем, людям — тревога.
+  // Ссылку quickpay можно собрать руками с любой суммой, поэтому сверка обязательна.
+  if (!order.paid && received < expected * 0.94) {
+    order.underpaid = received;
+    await env.ORDERS.put(orderId, JSON.stringify(order), { expirationTtl: 60 * 60 * 24 });
+    await tgSend(env,
+      '🔴 <b>НЕДОПЛАТА по заказу ' + order.id + '</b>\nПоступило ' + received +
+      '₽, ожидалось ' + expected + '₽.\nТелефон гостя: ' + esc(order.phone) +
+      '\nЗаказ НЕ передан на кухню.');
+    return new Response('ok');
+  }
+
+  if (!order.paid) {
+    order.paid = true;
+    order.paidAmount = received;
+    order.operationId = p.operation_id;
+    await env.ORDERS.put(orderId, JSON.stringify(order), { expirationTtl: 60 * 60 * 24 * 7 });
+  }
 
   const lines = order.items
     .map((it) => {
@@ -307,24 +334,38 @@ async function handleYoomoney(request, env) {
     '\n\n' +
     lines +
     '\n\nСумма заказа: <b>' + order.total + '₽</b>' +
-    (!order.demo && shortpay ? ' ⚠️ поступило ' + received + '₽' : '') +
     '\nИмя: ' + esc(order.name || '—') +
     '\nТелефон: ' + esc(order.phone) +
     '\nАдрес: ' + esc(order.address || '—') +
     (order.comment ? '\nКоммент: ' + esc(order.comment) : '');
 
-  await tgSend(env, msg);
+  // Заявка на кухню — самое важное звено. Не дошла — отвечаем ЮMoney ошибкой,
+  // она повторит уведомление, и мы попробуем снова (paid уже true, notified ещё нет).
+  const sent = await tgSend(env, msg);
+  if (!sent) {
+    console.log('TG SEND FAILED for', order.id, '— ждём повтора от ЮMoney');
+    return new Response('tg failed, retry', { status: 500 });
+  }
+  order.notified = true;
+  await env.ORDERS.put(orderId, JSON.stringify(order), { expirationTtl: 60 * 60 * 24 * 7 });
   return new Response('ok');
 }
 
 /* ---------- Утилиты ---------- */
 
 async function tgSend(env, text) {
-  await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text, parse_mode: 'HTML' }),
-  });
+  try {
+    const r = await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text, parse_mode: 'HTML' }),
+    });
+    if (!r.ok) console.log('TG error', r.status, (await r.text()).slice(0, 200));
+    return r.ok;
+  } catch (e) {
+    console.log('TG fetch failed', String(e));
+    return false;
+  }
 }
 
 function rfc3986(str) {
@@ -338,11 +379,6 @@ async function hmacSha256Hex(secret, msg) {
     'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function sha1hex(str) {
-  const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 function esc(s) {
