@@ -184,11 +184,20 @@ async function handleOrder(request, env) {
       sum: String(paySum),
       label: orderId,
       paymentType: 'AC', // банковская карта; 'PC' — кошелёк ЮMoney
-      successURL: order.successURL || '',
+      successURL: safeSuccessURL(order.successURL),
       targets: 'Заказ ' + orderId + ' — RIBAY',
     }).toString();
 
   return json({ orderId, total, paySum, payUrl });
+}
+
+/* Возврат после оплаты — только на наш сайт, чужие адреса не подставляем */
+function safeSuccessURL(u) {
+  try {
+    const parsed = new URL(String(u || ''));
+    if (parsed.origin === 'https://hippoundefined101r-spec.github.io') return parsed.href;
+  } catch {}
+  return 'https://hippoundefined101r-spec.github.io/ribay-steak-house/';
 }
 
 /* ---------- Прайс. ЕДИНСТВЕННЫЙ источник цен ---------- */
@@ -245,8 +254,13 @@ function calcTotal(items) {
 /* ---------- 2. Вебхук ЮMoney ---------- */
 
 async function handleYoomoney(request, env) {
-  const body = await request.formData();
-  const p = Object.fromEntries(body.entries());
+  let p;
+  try {
+    const body = await request.formData();
+    p = Object.fromEntries(body.entries());
+  } catch {
+    return new Response('bad body', { status: 400 });
+  }
 
   // Отсутствующее поле = пустая строка, НЕ undefined
   const f = (k) => (p[k] === undefined || p[k] === null) ? '' : String(p[k]);
