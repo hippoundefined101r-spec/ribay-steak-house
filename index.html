@@ -644,7 +644,7 @@ renderMenu('steaks');
     } catch(e){ return ''; }
   })();
   var WA_RULES = "Для оформления заказа, доставки или брони предлагай нажать зелёную кнопку WhatsApp внизу чата — заявка уйдёт менеджеру. ";
-  var ORDER_RULES = 'ОФОРМЛЕНИЕ И ОПЛАТА: заказ доставки и бронь стола оформляются прямо в чате с онлайн-оплатой, никакого WhatsApp не предлагай. Для доставки собери: блюда с количеством, телефон, адрес. Для брони: дата, время, число гостей, телефон — бронь подтверждается депозитом 500₽. Когда всё собрано, перечисли заказ гостю и спроси подтверждение. Только после явного подтверждения гостя добавь В САМОМ КОНЦЕ ответа служебную строку строго в формате [[ЗАКАЗ]]{"type":"delivery","items":[{"id":1,"qty":2}],"phone":"+7...","address":"улица, дом","name":"имя","comment":""}[[/ЗАКАЗ]] — id блюд бери только из меню выше, ничего не выдумывай. Для брони: "type":"booking", "items":[{"id":"bron","qty":1}], дату, время и число гостей запиши в comment, address не нужен. Гость служебную строку не увидит — после неё на сайте появится кнопка оплаты, так и скажи: сейчас появится кнопка оплаты ниже. Сумму к оплате сам не называй и не считай. ';
+  var ORDER_RULES = 'ОФОРМЛЕНИЕ И ОПЛАТА: заказ доставки и бронь стола оформляются прямо в чате с онлайн-оплатой, никакого WhatsApp не предлагай. Для доставки собери: блюда с количеством, имя, телефон, адрес. Для брони: дата, время, число гостей, имя, телефон — бронь подтверждается депозитом 500₽. Когда всё собрано, перечисли заказ гостю и спроси подтверждение. Только после явного подтверждения гостя добавь В САМОМ КОНЦЕ ответа служебную строку строго в формате [[ЗАКАЗ]]{"type":"delivery","items":[{"id":1,"qty":2}],"phone":"+7...","address":"улица, дом","name":"имя","comment":""}[[/ЗАКАЗ]] — id блюд бери только из меню выше, ничего не выдумывай. Для брони: "type":"booking", "items":[{"id":"bron","qty":1}], дату, время и число гостей запиши в comment, address не нужен. Гость служебную строку не увидит — после неё на сайте появится кнопка оплаты, так и скажи: сейчас появится кнопка оплаты ниже. Сумму к оплате сам не называй и не считай. ';
   var SYSTEM_ORDER_PART = PAY_ENABLED ? ORDER_RULES : WA_RULES;
   var SYSTEM = "Ты — Амина, консультант ресторана RIBAY Steak House в Махачкале (ул. Уллуаинская, 1, посёлок Семендер, Кировский район). Стейк-хаус: стейки из мраморной говядины на живом огне, шашлыки, дагестанская кухня, пицца, роллы. Рейтинг 4.7 в 2ГИС. Работаем ежедневно 12:00–24:00. Залы: основной, кабинки, VIP-зал, банкетный зал — всё бронируется. Есть молельная комната. Доставка: ежедневно 12:00–24:00, в среднем 60 минут, минимальный заказ 500₽, бесплатно от 1500₽. Телефон и WhatsApp: +7 969 770-07-00. МЕНЮ С ЦЕНАМИ: " + MENU_TEXT + ". ТОН: тёплый, гостеприимный, живой — как хороший официант, который знает меню наизусть. Простой человеческий язык, без канцелярита и без панибратства. Эмодзи не используй. ОБРАЩЕНИЕ: зеркаль гостя — на ты отвечай на ты, на вы — на вы. ПРАВИЛА: отвечай коротко, 1-3 предложения. Цены называй смело — они из меню. Советуй блюда под вкус, компанию и бюджет гостя, предлагай сочетания (стейк + салат, сет на компанию). " + SYSTEM_ORDER_PART + "Про бронь уточняй дату, время и число гостей, если гость сам не сказал. Чего нет в меню — честно говори, что нет, и предлагай похожее. На вопросы не про ресторан вежливо возвращай к теме. На салам/ассаляму алейкум отвечай: Ваалейкум ассалям.";
   var history = [];
@@ -742,6 +742,36 @@ renderMenu('steaks');
   }
   function hideChips(){ chips.innerHTML = ''; }
 
+  function checkPending(){
+    var raw;
+    try { raw = localStorage.getItem('rbPending'); } catch(e){ return; }
+    if (!raw) return;
+    var pend;
+    try { pend = JSON.parse(raw); } catch(e){ localStorage.removeItem('rbPending'); return; }
+    fetch(WORKER_URL + '/status?id=' + encodeURIComponent(pend.id))
+      .then(function(r){ return r.json(); })
+      .then(function(s){
+        if (s.paid) {
+          try { localStorage.removeItem('rbPending'); } catch(e){}
+          add('bot', (s.type === 'booking' ? 'Бронь ' : 'Заказ ') + s.id + ' оплачен ✅ Всё принято, менеджер перезвонит для подтверждения.');
+        } else if (s.id) {
+          var wrap = document.createElement('div');
+          wrap.className = 'rb-msg bot';
+          var t = document.createElement('div');
+          t.textContent = 'Заказ ' + s.id + ' ждёт оплаты:';
+          t.style.marginBottom = '8px';
+          var a = document.createElement('a');
+          a.href = pend.payUrl; a.target = '_blank'; a.rel = 'noopener';
+          a.className = 'rb-pay-btn';
+          a.textContent = 'Оплатить ' + pend.paySum + '₽';
+          wrap.appendChild(t); wrap.appendChild(a);
+          msgs.appendChild(wrap);
+          msgs.scrollTop = msgs.scrollHeight;
+        }
+      })
+      .catch(function(){});
+  }
+
   function initChat(){
     history = load();
     msgs.innerHTML = '';
@@ -755,9 +785,17 @@ renderMenu('steaks');
     } else {
       renderChips();
     }
+    checkPending();
   }
 
   var inited = false;
+  // Вернулся с оплаты (в localStorage висит заказ) — открываем чат сразу
+  try {
+    if (localStorage.getItem('rbPending')) {
+      panel.classList.add('open');
+      initChat(); inited = true;
+    }
+  } catch(e){}
   btn.addEventListener('click', function(){
     panel.classList.toggle('open');
     if (panel.classList.contains('open') && !inited) { initChat(); inited = true; }
@@ -816,6 +854,7 @@ renderMenu('steaks');
       a.rel = 'noopener';
       a.className = 'rb-pay-btn';
       a.textContent = 'Оплатить ' + d.paySum + '₽';
+      try { localStorage.setItem('rbPending', JSON.stringify({ id: d.orderId, payUrl: d.payUrl, paySum: d.paySum, total: d.total })); } catch(e){}
       wrap.appendChild(sumLine);
       wrap.appendChild(a);
       msgs.appendChild(wrap);
