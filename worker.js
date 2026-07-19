@@ -82,7 +82,7 @@ async function handleAI(request, env) {
   }
   const payload = {
     model: 'claude-sonnet-4-6',
-    max_tokens: Math.min(Number(body.max_tokens) || 300, 400),
+    max_tokens: Math.min(Number(body.max_tokens) || 500, 800),
     system: sys.slice(0, 8000),
     messages: Array.isArray(body.messages) ? body.messages.slice(-20) : [],
   };
