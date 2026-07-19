@@ -792,6 +792,7 @@ renderMenu('steaks');
 
   function createPayment(order){
     var wait = add('bot', 'Секунду, готовлю оплату...');
+    order.successURL = location.href.split('#')[0];
     fetch(WORKER_URL + '/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
