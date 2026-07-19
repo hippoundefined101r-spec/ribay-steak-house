@@ -5,6 +5,7 @@
  *   POST /yoomoney  — HTTP-уведомление от ЮMoney о входящем переводе
  *
  * Нужны переменные окружения (Settings → Variables в Cloudflare):
+ *   AI_API_KEY       — ключ API для чата Амины (НИКОГДА не класть во фронт)
  *   YOOMONEY_SECRET  — секрет из настроек HTTP-уведомлений ЮMoney
  *   YOOMONEY_WALLET  — номер кошелька (410011...)
  *   TG_BOT_TOKEN     — токен бота
@@ -31,6 +32,10 @@ export default {
       return new Response(null, { headers: CORS });
     }
 
+    if (url.pathname === '/ai' && request.method === 'POST') {
+      return handleAI(request, env);
+    }
+
     if (url.pathname === '/order' && request.method === 'POST') {
       return handleOrder(request, env);
     }
@@ -42,6 +47,53 @@ export default {
     return new Response('Not found', { status: 404 });
   },
 };
+
+/* ---------- 0. AI-прокси: ключ живёт здесь, не во фронте ---------- */
+/* Нужна переменная окружения AI_API_KEY (Settings → Variables). */
+
+const AI_URL = 'https://blank.aigcbest.top/v1/messages';
+
+async function handleAI(request, env) {
+  // Простая защита от слива баланса: не больше 30 запросов в час с одного IP
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const bucket = 'rl:' + ip + ':' + Math.floor(Date.now() / 3600000);
+  const used = parseInt((await env.ORDERS.get(bucket)) || '0', 10);
+  if (used >= 30) {
+    return json({ error: 'Слишком много запросов, попробуйте позже' }, 429);
+  }
+  await env.ORDERS.put(bucket, String(used + 1), { expirationTtl: 3700 });
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'bad json' }, 400);
+  }
+
+  // Модель и потолок токенов фиксируем на сервере — фронту не доверяем
+  const payload = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: Math.min(Number(body.max_tokens) || 300, 400),
+    system: String(body.system || '').slice(0, 8000),
+    messages: Array.isArray(body.messages) ? body.messages.slice(-20) : [],
+  };
+
+  const r = await fetch(AI_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': env.AI_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await r.text();
+  return new Response(text, {
+    status: r.status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
 
 /* ---------- 1. Фронт присылает заказ ---------- */
 
