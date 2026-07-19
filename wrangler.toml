@@ -1,0 +1,15 @@
+# Конфиг автодеплоя ribay-pay из GitHub.
+# Меняется код в worker.js -> пуш в main -> Cloudflare деплоит сам.
+
+name = "ribay-pay"
+main = "worker.js"
+account_id = "d166d155acf67d2f7cb8667bf7f502ed"
+compatibility_date = "2026-07-01"
+
+# КРИТИЧНО: не стирать переменные, заданные в дашборде
+# (AI_API_KEY, YOOMONEY_SECRET, YOOMONEY_WALLET, TG_BOT_TOKEN, TG_CHAT_ID)
+keep_vars = true
+
+[[kv_namespaces]]
+binding = "ORDERS"
+id = "fe9c68daf3504e578296de84c483b10b"
