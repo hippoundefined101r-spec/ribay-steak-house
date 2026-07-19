@@ -232,16 +232,16 @@ async function handleYoomoney(request, env) {
     .join('&');
 
   const computed = await hmacSha256Hex(env.YOOMONEY_SECRET || '', checkString);
-  const received = f('sign').toLowerCase();
+  const receivedSign = f('sign').toLowerCase();
 
-  if (computed !== received) {
+  if (computed !== receivedSign) {
     console.log('YOOMONEY BAD SIGNATURE', JSON.stringify({
       fields: Object.keys(p),
       notification_type: f('notification_type'),
       amount: f('amount'),
       label: f('label'),
       computed,
-      received,
+      received: receivedSign,
       secretLen: (env.YOOMONEY_SECRET || '').length,
     }));
     return new Response('bad signature', { status: 400 });
