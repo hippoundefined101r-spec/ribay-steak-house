@@ -890,7 +890,7 @@ renderMenu('steaks');
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 300,
+        max_tokens: 700,
         system: SYSTEM,
         messages: history
       })
@@ -967,6 +967,12 @@ renderMenu('steaks');
       typing.remove();
       var order = null;
       if (PAY_ENABLED) {
+        // Страховка: если ответ оборвался посреди служебной строки —
+        // не показываем человеку сырой код, просим подтвердить ещё раз
+        if (reply.indexOf('[[ЗАКАЗ]]') !== -1 && reply.indexOf('[[/ЗАКАЗ]]') === -1) {
+          reply = reply.slice(0, reply.indexOf('[[ЗАКАЗ]]')).trim();
+          reply = (reply ? reply + '\n\n' : '') + 'Похоже, ответ оборвался. Напишите «подтверждаю» ещё раз — и я оформлю заказ.';
+        }
         var m = reply.match(/\[\[ЗАКАЗ\]\]([\s\S]*?)\[\[\/ЗАКАЗ\]\]/);
         if (m) {
           try { order = JSON.parse(m[1]); } catch(e){ order = null; }
