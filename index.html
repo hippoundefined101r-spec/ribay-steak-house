@@ -629,8 +629,7 @@ renderMenu('steaks');
 
 <script>
 (function(){
-  var API_URL = "https://blank.aigcbest.top/v1/messages";
-  var API_KEY = "sk-hoyCgdrCNDtkIpLQyzxKCt3DchsBtSx74mgIRQvLq1WOlpuO";
+  // Ключ API живёт в Cloudflare Worker (переменная AI_API_KEY). Во фронте его нет и быть не должно.
   // URL платёжного воркера Cloudflare. Пока пусто — чат работает по-старому (WhatsApp).
   // После деплоя воркера вписать сюда: https://имя.workers.dev
   var WORKER_URL = "https://ribay-pay.isaisa0505isa.workers.dev";
@@ -683,12 +682,10 @@ renderMenu('steaks');
     var dialog = history.map(function(m){
       return (m.role === 'user' ? 'Гость: ' : 'Амина: ') + m.content;
     }).join('\n').slice(-2000);
-    return fetch(API_URL, {
+    return fetch(WORKER_URL + '/ai', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
@@ -767,12 +764,10 @@ renderMenu('steaks');
   });
 
   function callAnthropic(){
-    return fetch(API_URL, {
+    return fetch(WORKER_URL + '/ai', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
