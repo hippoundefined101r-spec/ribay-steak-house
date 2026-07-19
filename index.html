@@ -767,9 +767,15 @@ renderMenu('steaks');
           a.href = pend.payUrl; a.target = '_blank'; a.rel = 'noopener';
           a.className = 'rb-pay-btn';
           a.textContent = 'Оплатить ' + pend.paySum + '₽';
-          wrap.appendChild(t); wrap.appendChild(a);
+          var hint = document.createElement('div');
+          hint.textContent = 'Если вы только что оплатили — статус обновится в течение минуты, обновите страницу.';
+          hint.style.cssText = 'margin-top:8px;font-size:12px;opacity:.7';
+          wrap.appendChild(t); wrap.appendChild(a); wrap.appendChild(hint);
           msgs.appendChild(wrap);
           msgs.scrollTop = msgs.scrollHeight;
+        } else {
+          // Заказ истёк в хранилище (сутки прошли) — убираем хвост, чтобы не дёргать /status вечно
+          try { localStorage.removeItem('rbPending'); } catch(e){}
         }
       })
       .catch(function(){});
