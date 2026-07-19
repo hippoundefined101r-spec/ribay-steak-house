@@ -218,23 +218,37 @@ async function handleYoomoney(request, env) {
   const body = await request.formData();
   const p = Object.fromEntries(body.entries());
 
+  // Отсутствующее поле = пустая строка, НЕ undefined — иначе подпись никогда не сойдётся
+  const f = (k) => (p[k] === undefined || p[k] === null) ? '' : String(p[k]);
+
   // Проверка подписи sha1 по документации ЮMoney
   const checkString = [
-    p.notification_type,
-    p.operation_id,
-    p.amount,
-    p.currency,
-    p.datetime,
-    p.sender,
-    p.codepro,
+    f('notification_type'),
+    f('operation_id'),
+    f('amount'),
+    f('currency'),
+    f('datetime'),
+    f('sender'),
+    f('codepro'),
     env.YOOMONEY_SECRET,
-    p.label,
+    f('label'),
   ].join('&');
 
   const hash = await sha1hex(checkString);
-  if (hash !== p.sha1_hash) {
+  if (hash !== f('sha1_hash')) {
+    // Диагностика: какие поля пришли и сошлась ли подпись
+    console.log('YOOMONEY BAD SIGNATURE', JSON.stringify({
+      fields: Object.keys(p),
+      notification_type: f('notification_type'),
+      amount: f('amount'),
+      label: f('label'),
+      computed: hash,
+      received: f('sha1_hash'),
+      secretLen: (env.YOOMONEY_SECRET || '').length,
+    }));
     return new Response('bad signature', { status: 400 });
   }
+  console.log('YOOMONEY OK', f('notification_type'), f('amount'), 'label=' + f('label'));
 
   const orderId = p.label;
   if (!orderId) return new Response('ok'); // перевод без label — не наш заказ
