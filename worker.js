@@ -19,8 +19,8 @@ const DEMO_MODE = true;
 const DEMO_PRICE = 10;
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*', // потом сузить до домена сайта
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Origin': 'https://hippoundefined101r-spec.github.io',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -30,6 +30,10 @@ export default {
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: CORS });
+    }
+
+    if (url.pathname === '/status' && request.method === 'GET') {
+      return handleStatus(url, env);
     }
 
     if (url.pathname === '/ai' && request.method === 'POST') {
@@ -93,6 +97,18 @@ async function handleAI(request, env) {
     status: r.status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
   });
+}
+
+/* ---------- Статус заказа (для экрана после возврата с оплаты) ---------- */
+
+async function handleStatus(url, env) {
+  const id = url.searchParams.get('id') || '';
+  if (!/^R[a-z0-9]{6,20}$/i.test(id)) return json({ error: 'bad id' }, 400);
+  const raw = await env.ORDERS.get(id);
+  if (!raw) return json({ error: 'not found' }, 404);
+  const o = JSON.parse(raw);
+  // Наружу — только безличные поля. Телефон и адрес не отдаём.
+  return json({ id: o.id, paid: !!o.paid, total: o.total, paySum: o.paySum, type: o.type });
 }
 
 /* ---------- 1. Фронт присылает заказ ---------- */
